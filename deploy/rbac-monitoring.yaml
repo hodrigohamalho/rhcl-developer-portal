@@ -1,0 +1,15 @@
+# Allows the portal backend SA to query the in-cluster Thanos querier for
+# per-API traffic metrics (usage dashboard). Required only when
+# portal.rhcl.prometheus-url is set.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: portal-cluster-monitoring-view
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-monitoring-view
+subjects:
+  - kind: ServiceAccount
+    name: portal-backend
+    namespace: rhcl-devportal

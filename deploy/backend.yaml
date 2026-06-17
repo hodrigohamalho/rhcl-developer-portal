@@ -1,0 +1,106 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: portal-backend
+  namespace: rhcl-devportal
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: portal-backend
+  namespace: rhcl-devportal
+data:
+  # mock | kubernetes. Switch to "kubernetes" to drive the real RHCL CRDs.
+  RHCL_MODE: "kubernetes"
+  RHCL_NAMESPACE: "rhcl-apps"
+  RHCL_APIKEY_HEADER: "api-key"
+  RHCL_APIKEY_APP_LABEL: "banking-api-apikey"
+  # In-cluster Thanos querier for real per-API usage metrics (usage dashboard).
+  PORTAL_RHCL_PROMETHEUS_URL: "https://thanos-querier.openshift-monitoring.svc:9091"
+  SEED_ENABLED: "true"
+  # Cluster-specific values are rendered by deploy.sh (envsubst). See deploy.sh.
+  SEED_HOSTNAME: "${GATEWAY_HOST}"
+  RHCL_DEFAULT_HOSTNAME: "${GATEWAY_HOST}"
+  # OIDC (used in prod profile). Realm rhcl on the lab Keycloak.
+  OIDC_AUTH_SERVER_URL: "${OIDC_ISSUER}"
+  OIDC_TLS_VERIFICATION: "none"
+  # OIDC is a build-time-enabled extension, so it needs a runtime auth-server-url
+  # in every profile. These canonical QUARKUS_* keys satisfy it without a rebuild.
+  QUARKUS_OIDC_AUTH_SERVER_URL: "${OIDC_ISSUER}"
+  QUARKUS_OIDC_APPLICATION_TYPE: "service"
+  QUARKUS_OIDC_TLS_VERIFICATION: "none"
+  QUARKUS_HTTP_CORS_ENABLED: "true"
+  QUARKUS_HTTP_CORS_ORIGINS: "/.*/"
+  # OIDC enabled: bearer-token validation against realm rhcl; /api/me and
+  # /api/admin require authentication. The developer-portal client + api-*
+  # roles exist in Keycloak.
+  QUARKUS_PROFILE: "prod"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: portal-backend
+  namespace: rhcl-devportal
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: portal-backend
+  template:
+    metadata:
+      labels:
+        app: portal-backend
+    spec:
+      serviceAccountName: portal-backend
+      containers:
+        - name: backend
+          image: image-registry.openshift-image-registry.svc:5000/rhcl-devportal/developer-portal-backend:latest
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef: { name: portal-backend }
+          env:
+            - name: DB_URL
+              value: jdbc:postgresql://portal-db:5432/portal
+            - name: DB_USER
+              valueFrom: { secretKeyRef: { name: portal-db, key: POSTGRES_USER } }
+            - name: DB_PASSWORD
+              valueFrom: { secretKeyRef: { name: portal-db, key: POSTGRES_PASSWORD } }
+          readinessProbe:
+            httpGet: { path: /q/health/ready, port: 8080 }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /q/health/live, port: 8080 }
+            initialDelaySeconds: 20
+            periodSeconds: 15
+          resources:
+            requests: { cpu: 200m, memory: 384Mi }
+            limits: { cpu: "1", memory: 768Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: portal-backend
+  namespace: rhcl-devportal
+spec:
+  selector:
+    app: portal-backend
+  ports:
+    - port: 8080
+      targetPort: 8080
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: portal-backend
+  namespace: rhcl-devportal
+spec:
+  to:
+    kind: Service
+    name: portal-backend
+  port:
+    targetPort: 8080
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect

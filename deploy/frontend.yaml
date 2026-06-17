@@ -1,0 +1,76 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: portal-frontend
+  namespace: rhcl-devportal
+data:
+  # Cluster-specific values are rendered by deploy.sh (envsubst). See deploy.sh.
+  # Browser calls the backend Route directly.
+  API_BASE_URL: "https://${BACKEND_HOST}"
+  OIDC_ENABLED: "true"
+  OIDC_AUTHORITY: "${OIDC_ISSUER}"
+  OIDC_CLIENT_ID: "developer-portal"
+  # Tenant branding — overridden per install via deploy.sh / kustomize patch.
+  # Defaults are the demo placeholders the upstream ships with.
+  PORTAL_TENANT_NAME: "${PORTAL_TENANT_NAME}"
+  PORTAL_TENANT_DESCRIPTION: "${PORTAL_TENANT_DESCRIPTION}"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: portal-frontend
+  namespace: rhcl-devportal
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: portal-frontend
+  template:
+    metadata:
+      labels:
+        app: portal-frontend
+    spec:
+      containers:
+        - name: frontend
+          image: image-registry.openshift-image-registry.svc:5000/rhcl-devportal/developer-portal-frontend:latest
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef: { name: portal-frontend }
+          readinessProbe:
+            httpGet: { path: /config.js, port: 8080 }
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits: { cpu: 200m, memory: 128Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: portal-frontend
+  namespace: rhcl-devportal
+spec:
+  selector:
+    app: portal-frontend
+  ports:
+    - port: 8080
+      targetPort: 8080
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: portal-frontend
+  namespace: rhcl-devportal
+spec:
+  # Short, brandable URL — sits directly under the cluster apps wildcard
+  # (`*.apps.<cluster>`), so the default TLS cert still validates.
+  host: devportal.${APPS_DOMAIN}
+  to:
+    kind: Service
+    name: portal-frontend
+  port:
+    targetPort: 8080
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect

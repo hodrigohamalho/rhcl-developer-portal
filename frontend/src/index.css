@@ -1,0 +1,54 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-slate-50 text-slate-800 antialiased;
+  font-family: Inter, system-ui, sans-serif;
+  font-feature-settings: "cv11", "ss01";
+}
+
+/* Deep brand gradient used by the sidebar + hero surfaces. */
+.brand-gradient {
+  background:
+    radial-gradient(900px 380px at 0% -10%, rgba(109, 94, 252, 0.35), transparent 60%),
+    radial-gradient(700px 320px at 100% 0%, rgba(155, 92, 255, 0.28), transparent 55%),
+    linear-gradient(180deg, #1c1640 0%, #141235 100%);
+}
+
+.hero-sheen {
+  background:
+    radial-gradient(1100px 300px at 10% -40%, rgba(109, 94, 252, 0.14), transparent 60%),
+    radial-gradient(900px 280px at 90% -60%, rgba(238, 0, 0, 0.06), transparent 55%),
+    linear-gradient(180deg, #ffffff 0%, #fbfbff 100%);
+}
+
+/* Loading skeleton shimmer */
+.skeleton {
+  @apply relative overflow-hidden bg-slate-100;
+}
+.skeleton::after {
+  content: "";
+  @apply absolute inset-0 animate-shimmer;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.65), transparent);
+  transform: translateX(-100%);
+}
+
+/* Thin scrollbars for the dense panels */
+.scroll-thin::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+.scroll-thin::-webkit-scrollbar-thumb {
+  @apply rounded-full bg-slate-200;
+}

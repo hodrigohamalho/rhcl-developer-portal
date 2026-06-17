@@ -1,0 +1,43 @@
+# JVM build artifacts
+backend/target/
+backend/.mvn/wrapper/maven-wrapper.jar
+backend/dependency-reduced-pom.xml
+*.class
+*.jar
+
+# Quarkus
+backend/.quarkus/
+backend/build/
+
+# Node / Vite
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/coverage/
+
+# Local env files
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/
+.metals/
+.bloop/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+
+# Output of in-cluster builds (local tarballs)
+*.tar.gz
