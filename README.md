@@ -1,6 +1,6 @@
-# rhcl-developer-portal
+# RHCL Developer Example
 
-A self-service developer portal for APIs governed by [Red Hat Connectivity
+A sample developer portal for APIs governed by [Red Hat Connectivity
 Link](https://www.redhat.com/en/technologies/cloud-computing/openshift/connectivity-link)
 (downstream of the upstream [Kuadrant](https://kuadrant.io) project).
 
