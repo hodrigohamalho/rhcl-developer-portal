@@ -14,6 +14,7 @@ import Settings from "./pages/Settings";
 import AdminApis from "./pages/admin/AdminApis";
 import AdminSubscriptions from "./pages/admin/AdminSubscriptions";
 import AdminPlans from "./pages/admin/AdminPlans";
+import AdminSettings from "./pages/admin/AdminSettings";
 
 export default function App() {
   const auth = usePortalAuth();
@@ -54,9 +55,10 @@ export default function App() {
         <Route path="/analytics" element={<RequireAuth><Analytics /></RequireAuth>} />
         <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
         {/* Administration — reachable from Settings, not in the primary nav. */}
-        <Route path="/admin/apis" element={<RequireAuth><AdminApis /></RequireAuth>} />
-        <Route path="/admin/subscriptions" element={<RequireAuth><AdminSubscriptions /></RequireAuth>} />
-        <Route path="/admin/plans" element={<RequireAuth><AdminPlans /></RequireAuth>} />
+        <Route path="/admin/apis" element={<RequireAuth requires="canPublishApi"><AdminApis /></RequireAuth>} />
+        <Route path="/admin/subscriptions" element={<RequireAuth requires="canApprove"><AdminSubscriptions /></RequireAuth>} />
+        <Route path="/admin/plans" element={<RequireAuth requires="canPublishApi"><AdminPlans /></RequireAuth>} />
+        <Route path="/admin/settings" element={<RequireAuth requires="canApprove"><AdminSettings /></RequireAuth>} />
         <Route path="*" element={<Navigate to="/home" replace />} />
       </Routes>
     </AppShell>

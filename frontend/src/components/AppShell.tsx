@@ -17,7 +17,8 @@ import {
 } from "lucide-react";
 import { useAdminSubscriptions } from "../api/hooks";
 import { usePortalAuth } from "../auth/auth";
-import { config } from "../config";
+import { usePortalPermissions } from "../auth/permissions";
+import { useTenant } from "../hooks/useTenant";
 import { Button, cx } from "./ui";
 
 type NavItem = { to: string; label: string; icon: typeof Home; auth?: boolean };
@@ -35,6 +36,7 @@ const ADMIN_NAV: NavItem[] = [
   { to: "/admin/subscriptions", label: "Approvals", icon: Inbox },
   { to: "/admin/apis", label: "APIs", icon: ShieldCheck },
   { to: "/admin/plans", label: "Plans", icon: Layers },
+  { to: "/admin/settings", label: "System settings", icon: SettingsIcon },
 ];
 
 export default function AppShell({ children }: { children: ReactNode }) {
@@ -47,7 +49,11 @@ export default function AppShell({ children }: { children: ReactNode }) {
   // route-level RequireAuth handles that, but hiding them keeps the sidebar
   // honest about what's available.
   const nav = NAV.filter((n) => !n.auth || auth.isAuthenticated);
-  const isAdmin = auth.isAuthenticated && (auth.roles.includes("api-admin") || auth.roles.includes("api-owner"));
+  // hasAdminUI = can see the Administration nav group (either role).
+  // canApprove = api-admin only — used to surface the header Approvals
+  // queue button (api-owner manages APIs/Plans but doesn't approve keys).
+  const { canApprove, hasAdminUI } = usePortalPermissions();
+  const tenant = useTenant();
 
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[264px_1fr]">
@@ -63,7 +69,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
             ⬡
           </div>
           <div className="leading-tight">
-            <div className="text-sm font-bold">{config.tenant.name}</div>
+            <div className="text-sm font-bold">{tenant.name}</div>
             <div className="text-[11px] text-white/55">Developer Portal</div>
           </div>
         </button>
@@ -72,19 +78,25 @@ export default function AppShell({ children }: { children: ReactNode }) {
           {nav.map((item) => (
             <SidebarLink key={item.to} item={item} onClick={() => setMobileOpen(false)} />
           ))}
-          {isAdmin && (
+          {hasAdminUI && (
             <>
               <div className="mb-1 mt-5 px-3.5 text-[10px] font-bold uppercase tracking-wider text-white/40">
                 Administration
               </div>
-              {ADMIN_NAV.map((item) => (
-                <SidebarLink
-                  key={item.to}
-                  item={item}
-                  onClick={() => setMobileOpen(false)}
-                  badge={item.to === "/admin/subscriptions" ? <PendingApprovalsBadge /> : undefined}
-                />
-              ))}
+              {ADMIN_NAV
+                // Approvals + System settings are admin-only; APIs and Plans
+                // show for both owner and admin.
+                .filter((item) =>
+                  (item.to !== "/admin/subscriptions" && item.to !== "/admin/settings") || canApprove,
+                )
+                .map((item) => (
+                  <SidebarLink
+                    key={item.to}
+                    item={item}
+                    onClick={() => setMobileOpen(false)}
+                    badge={item.to === "/admin/subscriptions" ? <PendingApprovalsBadge /> : undefined}
+                  />
+                ))}
             </>
           )}
         </nav>
@@ -95,7 +107,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
               <div className="grid h-9 w-9 place-items-center rounded-full bg-white/15 text-sm font-bold">{initial}</div>
               <div className="min-w-0 flex-1">
                 <div className="truncate text-sm font-semibold">{auth.username}</div>
-                <div className="truncate text-[11px] text-white/55">{auth.email ?? config.tenant.name}</div>
+                <div className="truncate text-[11px] text-white/55">{auth.email ?? tenant.name}</div>
               </div>
               {auth.enabled && (
                 <button onClick={auth.logout} className="rounded-lg p-1.5 text-white/60 hover:bg-white/10 hover:text-white" title="Sign out">
@@ -137,7 +149,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
                 {/* Admin-only: a prominent "Pending approvals" CTA at the right
                     of the header, with a live count badge. Most-used admin
                     action; shouldn't require scrolling to find. */}
-                {isAdmin && <PendingApprovalsHeaderButton />}
+                {canApprove && <PendingApprovalsHeaderButton />}
                 <button className="relative rounded-xl p-2 text-slate-500 hover:bg-slate-100" title="Notifications">
                   <Bell size={18} />
                 </button>

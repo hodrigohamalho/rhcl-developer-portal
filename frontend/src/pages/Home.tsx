@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { useApis, useProfile, useUsage } from "../api/hooks";
 import { usePortalAuth } from "../auth/auth";
-import { config } from "../config";
+import { useTenant } from "../hooks/useTenant";
 import { PageHeader } from "../components/AppShell";
 import PendingApprovalsBanner from "../components/PendingApprovalsBanner";
 import { Badge, Button, Card, CardBody, ProgressRing, SectionHeading, Skeleton, Stat } from "../components/ui";
@@ -289,6 +289,7 @@ function RecentActivity({
 function PublicHome() {
   const auth = usePortalAuth();
   const { data: products } = useApis();
+  const tenant = useTenant();
 
   return (
     <>
@@ -297,7 +298,7 @@ function PublicHome() {
           <div className="flex-1">
             <Badge tone="neutral">Developer Portal</Badge>
             <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
-              Discover and consume {config.tenant.name} APIs
+              Discover and consume {tenant.name} APIs
             </h1>
             <p className="mt-3 max-w-xl text-[15px] text-slate-600">
               Browse our API catalogue, read the docs and try sandbox endpoints.

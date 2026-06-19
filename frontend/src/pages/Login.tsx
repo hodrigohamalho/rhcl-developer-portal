@@ -1,10 +1,11 @@
 import { KeyRound } from "lucide-react";
 import { usePortalAuth } from "../auth/auth";
-import { config } from "../config";
+import { useTenant } from "../hooks/useTenant";
 import { Button } from "../components/ui";
 
 export default function Login() {
   const auth = usePortalAuth();
+  const tenant = useTenant();
   return (
     <div className="brand-gradient flex min-h-screen items-center justify-center p-6 text-white">
       <div className="w-full max-w-md rounded-3xl bg-white/5 p-8 ring-1 ring-white/10 backdrop-blur">
@@ -13,8 +14,8 @@ export default function Login() {
             <KeyRound />
           </div>
           <div>
-            <h1 className="text-xl font-bold">{config.tenant.name} Developer Portal</h1>
-            <p className="text-sm text-white/70">{config.tenant.description}</p>
+            <h1 className="text-xl font-bold">{tenant.name} Developer Portal</h1>
+            <p className="text-sm text-white/70">{tenant.description}</p>
           </div>
         </div>
         <p className="mb-6 text-sm text-white/80">

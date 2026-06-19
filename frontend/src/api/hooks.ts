@@ -127,3 +127,64 @@ export function useUpdateApi() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["apis"] }),
   });
 }
+
+// ---- System settings -------------------------------------------------------
+
+export interface SettingView {
+  key: string;
+  value: string;
+  envDefault: string;
+  overridden: boolean;
+  requiresRestart: boolean;
+  description: string;
+}
+
+/** Map<key, SettingView>; admin only. */
+export const useAdminSettings = () =>
+  useQuery({
+    queryKey: ["admin", "settings"],
+    queryFn: () => api.get<Record<string, SettingView>>("/api/admin/settings"),
+  });
+
+export function useUpdateSetting() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ key, value }: { key: string; value: string }) =>
+      api.put<SettingView>(`/api/admin/settings/${key}`, { value }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin", "settings"] }),
+  });
+}
+
+export function useResetSetting() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (key: string) => api.del<SettingView>(`/api/admin/settings/${key}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin", "settings"] }),
+  });
+}
+
+export function useTestPrometheus() {
+  return useMutation({
+    mutationFn: (url: string) =>
+      api.post<{ ok: boolean; status?: number; snippet?: string; error?: string }>(
+        "/api/admin/settings/test-prometheus",
+        { url },
+      ),
+  });
+}
+
+/** Public — tenant name/description, read on portal boot before login. */
+export const useSystemTenant = () =>
+  useQuery({
+    queryKey: ["system", "tenant"],
+    queryFn: () => api.get<{ name: string; description: string }>("/api/system/tenant"),
+    staleTime: 5 * 60_000,
+  });
+
+/** Public — current OIDC config (issuer + clientId) for the admin display. */
+export const useSystemOidcInfo = () =>
+  useQuery({
+    queryKey: ["system", "oidc"],
+    queryFn: () => api.get<{ authority: string; clientId: string }>("/api/system/oidc-info"),
+    staleTime: 5 * 60_000,
+  });

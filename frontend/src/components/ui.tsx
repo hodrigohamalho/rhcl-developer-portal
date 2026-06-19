@@ -114,6 +114,10 @@ const tones: Record<string, string> = {
   bronze: "bg-orange-50 text-orange-700 ring-orange-600/20",
   success: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
   neutral: "bg-slate-100 text-slate-600 ring-slate-500/20",
+  // `info` is reserved for protocol / role markers (e.g. the MCP badge on
+  // Model Context Protocol products) — a calm blue so it doesn't compete
+  // visually with the green/amber/red status palette above.
+  info: "bg-blue-50 text-blue-700 ring-blue-600/20",
 };
 
 export function Badge({ children, tone }: { children: ReactNode; tone?: string }) {

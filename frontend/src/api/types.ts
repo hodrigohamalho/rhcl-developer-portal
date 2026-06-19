@@ -1,3 +1,5 @@
+export type ApiProtocol = "REST" | "MCP";
+
 export interface ApiProduct {
   id: number;
   name: string;
@@ -13,6 +15,11 @@ export interface ApiProduct {
   contactTeam: string;
   contactEmail: string;
   updatedAt: string;
+  /** Wire protocol — REST for traditional HTTP APIs, MCP for Model Context
+   * Protocol servers discovered from MCPServerRegistration CRs. */
+  protocol: ApiProtocol;
+  /** Public MCP endpoint URL (only set when protocol === "MCP"). */
+  mcpEndpoint: string | null;
 }
 
 export interface Plan {

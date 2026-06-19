@@ -1,14 +1,13 @@
 import { Link } from "react-router-dom";
 import { ShieldCheck, ExternalLink } from "lucide-react";
 import { useProfile } from "../api/hooks";
-import { usePortalAuth } from "../auth/auth";
+import { usePortalPermissions } from "../auth/permissions";
 import { PageHeader } from "../components/AppShell";
 import { Badge, Card, CardBody, SectionHeading, Skeleton } from "../components/ui";
 
 export default function Settings() {
   const { data: profile, isLoading } = useProfile();
-  const auth = usePortalAuth();
-  const isAdmin = auth.roles.includes("api-admin") || auth.roles.includes("api-owner");
+  const { canApprove, canPublishApi, hasAdminUI } = usePortalPermissions();
 
   return (
     <>
@@ -48,18 +47,28 @@ export default function Settings() {
               </CardBody>
             </Card>
 
-            {isAdmin && (
+            {hasAdminUI && (
               <Card>
                 <CardBody>
                   <div className="mb-2 flex items-center gap-2">
                     <ShieldCheck size={18} className="text-brand-600" />
                     <span className="font-semibold text-slate-800">Administration</span>
                   </div>
-                  <p className="mb-3 text-sm text-slate-500">Manage products, plans and approve access requests.</p>
+                  <p className="mb-3 text-sm text-slate-500">
+                    {canApprove
+                      ? "Manage products, plans and approve access requests."
+                      : "Manage products and plans you own."}
+                  </p>
                   <div className="space-y-2 text-sm">
-                    <AdminLink to="/admin/subscriptions" label="Review access requests" />
-                    <AdminLink to="/admin/apis" label="Manage products" />
-                    <AdminLink to="/admin/plans" label="Manage plans" />
+                    {canApprove && (
+                      <AdminLink to="/admin/subscriptions" label="Review access requests" />
+                    )}
+                    {canPublishApi && (
+                      <>
+                        <AdminLink to="/admin/apis" label="Manage products" />
+                        <AdminLink to="/admin/plans" label="Manage plans" />
+                      </>
+                    )}
                   </div>
                 </CardBody>
               </Card>
