@@ -159,7 +159,27 @@ public class KubernetesRhclIntegrationService implements RhclIntegrationService 
         if (workload.isBlank()) {
             return emptyUsage();
         }
-        String selector = "destination_workload=~\"" + workload + ".*\",reporter=\"destination\"";
+        // Reporter: prefer `destination` (request-side sidecar emits with the
+        // workload's own perspective) but fall back to `source` since most
+        // backends in the lab don't run an Istio sidecar — only the gateway
+        // does, and it reports as `source`. The regex matches whichever is
+        // present so the dashboard works regardless of mesh topology.
+        //
+        // Per-consumer filter: the AuthPolicy injects `x-consumer-id` whose
+        // value is the API-key Secret name (e.g. `apikey-banking-api-alice-3`),
+        // and the req041 Telemetry CR projects that header into the
+        // `request_headers_x_consumer_id` Prometheus label. With both in place
+        // analytics show only THIS subscription's traffic.
+        // The filter is strict — without the Telemetry CR the label is absent
+        // and this query returns zero. That's a visible-failure-mode on purpose
+        // (better than silently aggregating every consumer's traffic into the
+        // logged-in user's dashboard). Install req041 / the grafana role to
+        // populate the label.
+        String keyName = nameFromRef(subscription.rhclApiKeyRef);
+        String consumerId = keyName == null ? "" : "apikey-" + keyName;
+        String selector = "destination_workload=~\"" + workload + ".*\""
+                + ",reporter=~\"source|destination\""
+                + (consumerId.isBlank() ? "" : ",request_headers_x_consumer_id=\"" + consumerId + "\"");
 
         long total = 0, success = 0, blocked = 0, e4 = 0, e5 = 0;
         var series = new java.util.ArrayList<UsageSummary.Point>();

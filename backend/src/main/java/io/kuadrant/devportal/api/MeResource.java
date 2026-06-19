@@ -120,11 +120,33 @@ public class MeResource {
     public UsageDto usage(@QueryParam("subscriptionId") Long subscriptionId,
             @QueryParam("days") @jakarta.ws.rs.DefaultValue("7") int days) {
         PortalUser u = currentUser.get();
-        Subscription sub = Subscription.findById(subscriptionId);
-        if (sub == null || !sub.userId.equals(u.id)) {
-            throw new BadRequestException("subscriptionId required and must belong to the user");
+        UsageQuery query = UsageQuery.lastDays(days);
+
+        // Drill-down path: caller named a specific subscription. Must belong
+        // to the current user (404 otherwise — we deliberately don't leak
+        // anything about other users' subscriptions through the error).
+        if (subscriptionId != null) {
+            Subscription sub = Subscription.findById(subscriptionId);
+            if (sub == null || !sub.userId.equals(u.id)) {
+                throw new BadRequestException(
+                    "subscriptionId, if provided, must belong to the current user");
+            }
+            return UsageDto.of(rhcl.get().getUsage(sub, query));
         }
-        return UsageDto.of(rhcl.get().getUsage(sub, UsageQuery.lastDays(days)));
+
+        // Aggregate path: sum across every APPROVED subscription the user
+        // owns. This is the default the Analytics page lands on so the user
+        // immediately sees combined traffic instead of having to pick one.
+        List<Subscription> subs = Subscription.<Subscription>list("userId", u.id).stream()
+            .filter(s -> s.status == io.kuadrant.devportal.domain.Enums.SubscriptionStatus.APPROVED)
+            .toList();
+        return UsageDto.aggregate(
+            subs.stream()
+                .map(s -> {
+                    var usage = rhcl.get().getUsage(s, query);
+                    return new UsageDto.AggregateInput(s, usage);
+                })
+                .toList());
     }
 
     private static Environment parseEnv(String env) {

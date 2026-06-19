@@ -23,11 +23,11 @@ public final class Dtos {
     public record ApiProductDto(Long id, String name, String displayName, String description, String version,
             String status, String owner, String baseUrl, String openApiSpecUrl, String approvalMode,
             List<String> tags, String contactTeam, String contactEmail, Instant updatedAt,
-            String protocol, String mcpEndpoint) {
+            String protocol, String mcpEndpoint, boolean published) {
         public static ApiProductDto of(ApiProduct p) {
             return new ApiProductDto(p.id, p.name, p.displayName, p.description, p.version, p.status.name(),
                     p.owner, p.baseUrl, p.openApiSpecUrl, p.approvalMode.name(), p.tags, p.contactTeam,
-                    p.contactEmail, p.updatedAt, p.protocol.name(), p.mcpEndpoint);
+                    p.contactEmail, p.updatedAt, p.protocol.name(), p.mcpEndpoint, p.published);
         }
     }
 
@@ -82,12 +82,66 @@ public final class Dtos {
 
     public record UsageDto(long totalRequests, long successCount, long blockedCount, long error4xxCount,
             long error5xxCount, double avgLatencyMs, long limitRemaining, double usagePercent, Instant quotaResetAt,
-            List<UsageSummary.Point> series) {
+            List<UsageSummary.Point> series, List<TopProductDto> topProducts) {
         public static UsageDto of(UsageSummary s) {
             return new UsageDto(s.totalRequests(), s.successCount(), s.blockedCount(), s.error4xxCount(),
                     s.error5xxCount(), s.avgLatencyMs(), s.limitRemaining(), s.usagePercent(), s.quotaResetAt(),
-                    s.series());
+                    s.series(), List.of());
         }
+
+        /** Per-subscription input row for aggregate(). */
+        public record AggregateInput(Subscription subscription, UsageSummary usage) {
+        }
+
+        /**
+         * Sum the per-subscription summaries into a single dashboard view.
+         * Avg latency is weighted by request count so a heavy quiet client
+         * doesn't drag the headline number down. Quota fields aren't summed
+         * — they're plan-scoped concepts that don't aggregate cleanly, so
+         * we return zeros and the UI hides the quota ring for "All".
+         */
+        public static UsageDto aggregate(List<AggregateInput> rows) {
+            long total = 0, ok = 0, blocked = 0, e4 = 0, e5 = 0;
+            double latencyNum = 0; // weighted sum
+            // bucketByTimestamp keeps the timeseries comparable across the
+            // sources — they should already share the same step (UsageQuery
+            // defaults), so equal timestamps line up.
+            var bucketByTimestamp = new java.util.LinkedHashMap<Instant, long[]>(); // [req, ok, blocked]
+            var byProduct = new java.util.LinkedHashMap<String, long[]>();           // name -> [req]
+            for (var row : rows) {
+                var u = row.usage();
+                total += u.totalRequests();
+                ok += u.successCount();
+                blocked += u.blockedCount();
+                e4 += u.error4xxCount();
+                e5 += u.error5xxCount();
+                latencyNum += u.avgLatencyMs() * u.totalRequests();
+                for (var p : u.series()) {
+                    long[] cur = bucketByTimestamp.computeIfAbsent(p.timestamp(), k -> new long[3]);
+                    cur[0] += p.requestCount();
+                    cur[1] += p.successCount();
+                    cur[2] += p.blockedCount();
+                }
+                ApiProduct product = ApiProduct.findById(row.subscription().apiProductId);
+                String pname = product != null && product.displayName != null
+                    ? product.displayName
+                    : (product != null ? product.name : "api-" + row.subscription().apiProductId);
+                byProduct.computeIfAbsent(pname, k -> new long[1])[0] += u.totalRequests();
+            }
+            double latency = total > 0 ? latencyNum / total : 0.0;
+            var merged = bucketByTimestamp.entrySet().stream()
+                .map(e -> new UsageSummary.Point(e.getKey(), e.getValue()[0], e.getValue()[1], e.getValue()[2]))
+                .toList();
+            var top = byProduct.entrySet().stream()
+                .map(e -> new TopProductDto(e.getKey(), e.getValue()[0]))
+                .sorted((a, b) -> Long.compare(b.requestCount(), a.requestCount()))
+                .toList();
+            return new UsageDto(total, ok, blocked, e4, e5, latency, 0L, 0.0, Instant.EPOCH, merged, top);
+        }
+    }
+
+    /** Per-product slice surfaced in the aggregate view's "Top products" card. */
+    public record TopProductDto(String name, long requestCount) {
     }
 
     public record AdminApiRequest(@NotBlank String name, @NotBlank String displayName, String description,
