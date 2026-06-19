@@ -11,13 +11,20 @@ import {
   Star,
   Zap,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { useApi, useApiPlans } from "../api/hooks";
+import { api } from "../api/client";
 import { PageHeader } from "../components/AppShell";
 import { Badge, Button, Card, CardBody, Skeleton, Tabs } from "../components/ui";
 import { productVisual } from "../lib/products";
 import type { Plan } from "../api/types";
 
-const TABS = ["Overview", "APIs", "Plans", "Getting Started", "Changelog", "Support"];
+const REST_TABS = ["Overview", "APIs", "Plans", "Getting Started", "Changelog", "Support"];
+// MCP swaps "APIs" (which would imply REST endpoints) for "Tools" (the MCP
+// JSON-RPC method that lists callable functions) and adds "Connect" with
+// per-client snippets — Claude Desktop, Cline, mcp-inspector. "Playground"
+// is the live tool-call form (Phase C).
+const MCP_TABS = ["Overview", "Tools", "Connect", "Playground", "Plans", "Support"];
 
 export default function ProductDetail() {
   const { id } = useParams();
@@ -29,6 +36,8 @@ export default function ProductDetail() {
 
   if (isLoading || !p) return <Skeleton className="h-72" />;
   const { Icon, tile } = productVisual(`${p.name} ${p.tags?.join(" ")}`);
+  const isMcp = (p.protocol ?? "REST") === "MCP";
+  const TABS = isMcp ? MCP_TABS : REST_TABS;
 
   return (
     <>
@@ -46,13 +55,14 @@ export default function ProductDetail() {
             <div className="flex flex-wrap items-center gap-3">
               <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">{p.displayName}</h1>
               <Badge tone={p.status}>{p.status}</Badge>
+              {isMcp && <Badge tone="info">MCP</Badge>}
             </div>
             <p className="mt-2 max-w-2xl text-[15px] text-slate-600">{p.description}</p>
             <div className="mt-4 flex flex-wrap gap-2 text-xs">
               <Meta>{(plans?.length ?? 0)} Plans</Meta>
               <Meta>{p.version}</Meta>
-              <Meta>REST</Meta>
-              <Meta>OpenAPI 3.0</Meta>
+              <Meta>{isMcp ? "MCP" : "REST"}</Meta>
+              <Meta>{isMcp ? "JSON-RPC 2.0" : "OpenAPI 3.0"}</Meta>
               <Meta tone="emerald">● Sandbox available</Meta>
             </div>
           </div>
@@ -71,6 +81,9 @@ export default function ProductDetail() {
       <div className="mt-6 animate-fade-up">
         {tab === "Overview" && <Overview product={p} />}
         {tab === "APIs" && <ApisTab product={p} />}
+        {tab === "Tools" && <McpToolsTab productId={pid} />}
+        {tab === "Connect" && <McpConnectTab product={p} />}
+        {tab === "Playground" && <McpPlaygroundTab productId={pid} />}
         {tab === "Plans" && <PlansTab plans={plans ?? []} onPick={() => navigate(`/products/${pid}/subscribe`)} />}
         {tab === "Getting Started" && <GettingStarted pid={pid} />}
         {tab === "Changelog" && <Changelog product={p} />}
@@ -274,6 +287,230 @@ function Support({ product }: { product: { contactTeam: string; contactEmail: st
             {product.contactEmail || "—"}
           </a>
         </div>
+      </CardBody>
+    </Card>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// MCP-specific tabs
+// ---------------------------------------------------------------------------
+
+interface McpTool {
+  name: string;
+  description?: string;
+  inputSchema?: Record<string, unknown>;
+}
+
+/** Calls the backend proxy that does the MCP `tools/list` JSON-RPC. */
+function useMcpTools(productId: number) {
+  return useQuery({
+    queryKey: ["mcp", "tools", productId],
+    queryFn: () => api.get<{ result?: { tools?: McpTool[] }; error?: { message?: string } }>(
+      `/api/catalog/apis/${productId}/mcp/tools`,
+    ),
+  });
+}
+
+function McpToolsTab({ productId }: { productId: number }) {
+  const { data, isLoading, error } = useMcpTools(productId);
+  if (isLoading) return <Skeleton className="h-40" />;
+  if (error) {
+    return (
+      <Card>
+        <CardBody>
+          <div className="text-sm text-red-600">Failed to load tools — {(error as Error).message}</div>
+        </CardBody>
+      </Card>
+    );
+  }
+  const tools = data?.result?.tools ?? [];
+  if (tools.length === 0) {
+    return (
+      <Card>
+        <CardBody>
+          <div className="text-sm text-slate-500">
+            The MCP server returned no tools, or rejected the unauthenticated
+            <code className="mx-1">tools/list</code>. Subscribe to obtain an API
+            key, then revisit the Playground tab to call tools live.
+          </div>
+        </CardBody>
+      </Card>
+    );
+  }
+  return (
+    <div className="grid gap-3">
+      {tools.map((t) => (
+        <Card key={t.name}>
+          <CardBody>
+            <div className="flex items-baseline justify-between gap-2">
+              <code className="font-mono text-sm font-semibold text-slate-900">{t.name}</code>
+              {t.inputSchema && (
+                <span className="text-[11px] text-slate-400">
+                  {Object.keys((t.inputSchema as { properties?: Record<string, unknown> }).properties || {}).length} input(s)
+                </span>
+              )}
+            </div>
+            {t.description && (
+              <p className="mt-1 text-sm text-slate-600">{t.description}</p>
+            )}
+            {t.inputSchema && (
+              <details className="mt-3 rounded-lg border border-slate-100 p-2">
+                <summary className="cursor-pointer text-xs font-medium text-slate-500">
+                  input schema
+                </summary>
+                <pre className="mt-2 overflow-x-auto rounded bg-slate-900 p-3 font-mono text-xs text-slate-200 scroll-thin">
+                  {JSON.stringify(t.inputSchema, null, 2)}
+                </pre>
+              </details>
+            )}
+          </CardBody>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+const CONNECT_SNIPPETS: { id: string; label: string; render: (url: string) => string }[] = [
+  {
+    id: "claude",
+    label: "Claude Desktop (~/Library/Application Support/Claude/claude_desktop_config.json)",
+    render: (url) =>
+      JSON.stringify(
+        {
+          mcpServers: {
+            "my-rhcl-server": {
+              type: "http",
+              url,
+              headers: { "api-key": "<paste your API key>" },
+            },
+          },
+        },
+        null,
+        2,
+      ),
+  },
+  {
+    id: "cline",
+    label: "Cline / Continue (~/.cline/mcp_settings.json)",
+    render: (url) =>
+      JSON.stringify(
+        {
+          servers: [{ name: "rhcl", url, headers: { "api-key": "<paste your API key>" } }],
+        },
+        null,
+        2,
+      ),
+  },
+  {
+    id: "inspector",
+    label: "mcp-inspector (npx)",
+    render: (url) => `npx @modelcontextprotocol/inspector --url ${url} \\
+  --header "api-key=<paste your API key>"`,
+  },
+];
+
+function McpConnectTab({ product }: { product: { mcpEndpoint: string | null; displayName: string } }) {
+  const url = product.mcpEndpoint || "https://gateway.example.com/mcp";
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardBody>
+          <h3 className="font-bold text-slate-900">Endpoint</h3>
+          <div className="mt-2">
+            <code className="block truncate rounded-lg bg-slate-100 px-3 py-2 font-mono text-sm text-slate-700">
+              {url}
+            </code>
+            <p className="mt-2 text-xs text-slate-500">
+              Authenticate with the <code>api-key</code> header. Subscribe to a
+              plan above to obtain a key.
+            </p>
+          </div>
+        </CardBody>
+      </Card>
+      {CONNECT_SNIPPETS.map((s) => (
+        <Card key={s.id}>
+          <CardBody>
+            <div className="mb-2 text-sm font-semibold text-slate-700">{s.label}</div>
+            <pre className="overflow-x-auto rounded-lg bg-slate-900 p-3 font-mono text-xs leading-relaxed text-emerald-200 scroll-thin">
+              {s.render(url)}
+            </pre>
+          </CardBody>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+function McpPlaygroundTab({ productId }: { productId: number }) {
+  const { data: toolsData } = useMcpTools(productId);
+  const tools = toolsData?.result?.tools ?? [];
+  const [selected, setSelected] = useState<string>("");
+  const [apiKey, setApiKey] = useState("");
+  const [argsJson, setArgsJson] = useState("{}");
+  const [response, setResponse] = useState<string | null>(null);
+  const [calling, setCalling] = useState(false);
+  const call = async () => {
+    setCalling(true);
+    setResponse(null);
+    try {
+      const parsedArgs = argsJson.trim() ? JSON.parse(argsJson) : {};
+      const result = await api.post<unknown>(`/api/catalog/apis/${productId}/mcp/call`, {
+        name: selected,
+        arguments: parsedArgs,
+        apiKey: apiKey || undefined,
+      });
+      setResponse(JSON.stringify(result, null, 2));
+    } catch (e) {
+      setResponse(`Error: ${(e as Error).message}`);
+    } finally {
+      setCalling(false);
+    }
+  };
+  return (
+    <Card>
+      <CardBody className="space-y-4">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="block">
+            <div className="mb-1 text-xs font-medium text-slate-600">Tool</div>
+            <select
+              value={selected}
+              onChange={(e) => setSelected(e.target.value)}
+              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+            >
+              <option value="">— pick a tool —</option>
+              {tools.map((t) => (
+                <option key={t.name} value={t.name}>{t.name}</option>
+              ))}
+            </select>
+          </label>
+          <label className="block">
+            <div className="mb-1 text-xs font-medium text-slate-600">API key</div>
+            <input
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              placeholder="bk_live_…"
+              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 font-mono text-sm"
+            />
+          </label>
+        </div>
+        <label className="block">
+          <div className="mb-1 text-xs font-medium text-slate-600">Arguments (JSON)</div>
+          <textarea
+            rows={5}
+            value={argsJson}
+            onChange={(e) => setArgsJson(e.target.value)}
+            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 font-mono text-sm"
+          />
+        </label>
+        <Button onClick={call} disabled={!selected || calling}>
+          {calling ? "Calling…" : "Call tool"}
+        </Button>
+        {response !== null && (
+          <pre className="mt-3 overflow-x-auto rounded-xl bg-ink-900 p-4 font-mono text-xs leading-relaxed text-emerald-200 scroll-thin">
+            {response}
+          </pre>
+        )}
       </CardBody>
     </Card>
   );

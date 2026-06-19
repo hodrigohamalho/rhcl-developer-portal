@@ -7,16 +7,23 @@ import { Badge, Button, Card, CardBody, EmptyState, Input, Skeleton } from "../c
 import { productVisual } from "../lib/products";
 
 const FILTERS = ["All", "Active", "Beta"] as const;
+// Protocol facet — All / REST / MCP. MCP products are surfaced by the
+// MCPDiscoveryService and look different in the detail page (Tools tab
+// instead of Swagger). Letting the user narrow down by protocol keeps a
+// catalogue with a mix of HTTP APIs and MCP servers scannable.
+const PROTO_FILTERS = ["All", "REST", "MCP"] as const;
 
 export default function Products() {
   const { data: products, isLoading } = useApis();
   const navigate = useNavigate();
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("All");
+  const [proto, setProto] = useState<(typeof PROTO_FILTERS)[number]>("All");
 
   const filtered = useMemo(() => {
     let list = products ?? [];
     if (filter !== "All") list = list.filter((p) => p.status === filter.toUpperCase());
+    if (proto !== "All") list = list.filter((p) => (p.protocol ?? "REST") === proto);
     if (q) {
       const t = q.toLowerCase();
       list = list.filter(
@@ -27,7 +34,7 @@ export default function Products() {
       );
     }
     return list;
-  }, [products, q, filter]);
+  }, [products, q, filter, proto]);
 
   return (
     <>
@@ -59,6 +66,20 @@ export default function Products() {
             </button>
           ))}
         </div>
+        <div className="flex rounded-xl border border-slate-200 bg-white p-1">
+          {PROTO_FILTERS.map((p) => (
+            <button
+              key={p}
+              onClick={() => setProto(p)}
+              className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+                proto === p ? "bg-slate-800 text-white" : "text-slate-500 hover:text-slate-700"
+              }`}
+              title={p === "MCP" ? "Model Context Protocol servers" : undefined}
+            >
+              {p}
+            </button>
+          ))}
+        </div>
       </div>
 
       {isLoading ? (
@@ -84,7 +105,10 @@ export default function Products() {
                     <div className={`grid h-12 w-12 place-items-center rounded-2xl ${tile}`}>
                       <Icon size={24} />
                     </div>
-                    <Badge tone={p.status}>{p.status}</Badge>
+                    <div className="flex flex-col items-end gap-1">
+                      {(p.protocol ?? "REST") === "MCP" && <Badge tone="info">MCP</Badge>}
+                      <Badge tone={p.status}>{p.status}</Badge>
+                    </div>
                   </div>
                   <h3 className="text-lg font-bold text-slate-900">{p.displayName}</h3>
                   <p className="mt-1 line-clamp-2 flex-1 text-sm text-slate-500">{p.description}</p>
