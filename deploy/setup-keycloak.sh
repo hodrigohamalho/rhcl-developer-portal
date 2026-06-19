@@ -68,6 +68,25 @@ else
   case "$code" in 201) echo "client developer-portal: created" ;; *) echo "client developer-portal: HTTP $code" ;; esac
 fi
 
+# --- Ensure `roles` client scope is a default on the client ----------------
+# Without this, Keycloak omits realm_access.roles from the access token, so
+# the frontend's admin gate never sees `api-admin` even when the user has it.
+# The `roles` scope is a built-in realm scope (every Keycloak realm has one).
+CID=$(curl -sk "$api/clients?clientId=developer-portal" -H "$auth" \
+  | sed -E 's/.*"id":"([0-9a-f-]+)".*/\1/' | head -1)
+ROLES_SCOPE_ID=$(curl -sk "$api/client-scopes" -H "$auth" \
+  | python3 -c "import sys,json;d=json.load(sys.stdin);
+for s in d:
+  if s.get('name')=='roles': print(s['id']);break" 2>/dev/null)
+if [ -n "$CID" ] && [ -n "$ROLES_SCOPE_ID" ]; then
+  code=$(curl -sk -o /dev/null -w '%{http_code}' -X PUT \
+    "$api/clients/$CID/default-client-scopes/$ROLES_SCOPE_ID" -H "$auth")
+  case "$code" in 204) echo "client developer-portal: 'roles' default scope ensured" ;;
+    409) echo "client developer-portal: 'roles' default scope already present" ;;
+    *) echo "client developer-portal: roles scope HTTP $code" ;;
+  esac
+fi
+
 # --- Optional role mapping (opt-in) -----------------------------------------
 role_rep() { curl -sk "$api/roles/$1" -H "$auth"; }
 map_roles() { # $1=username  $2=json array of role reps

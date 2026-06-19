@@ -89,12 +89,17 @@ public class KubernetesRhclIntegrationService implements RhclIntegrationService 
         client.secrets().inNamespace(ns).resource(secret).serverSideApply();
 
         // 2) APIKey CR linking product/plan/secret (devportal model).
-        GenericKubernetesResource apiKey = devPortalResource("APIKey", "apikeys", resourceName, ns, Map.of(
-                "apiProductRef", Map.of("name", apiName),
-                "planTier", plan != null ? plan.tier : "bronze",
-                "requestedBy", Map.of("email", user != null ? user.email : "", "userId", userId),
-                "secretRef", Map.of("name", secretName),
-                "useCase", subscription.useCase != null ? subscription.useCase : "Provisioned by developer portal"));
+        // `secretRef` was added in Kuadrant 1.4's CRD; the 1.3 schema rejects
+        // it as an unknown field. Only include when explicitly enabled.
+        Map<String, Object> apiKeySpec = new java.util.LinkedHashMap<>();
+        apiKeySpec.put("apiProductRef", Map.of("name", apiName));
+        apiKeySpec.put("planTier", plan != null ? plan.tier : "bronze");
+        apiKeySpec.put("requestedBy", Map.of("email", user != null ? user.email : "", "userId", userId));
+        if (config.apiKeyEmitSecretRef()) {
+            apiKeySpec.put("secretRef", Map.of("name", secretName));
+        }
+        apiKeySpec.put("useCase", subscription.useCase != null ? subscription.useCase : "Provisioned by developer portal");
+        GenericKubernetesResource apiKey = devPortalResource("APIKey", "apikeys", resourceName, ns, apiKeySpec);
         client.genericKubernetesResources(API_KEY).inNamespace(ns).resource(apiKey).serverSideApply();
 
         subscription.rhclApiKeyRef = ns + "/" + resourceName;

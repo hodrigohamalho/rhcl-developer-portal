@@ -33,10 +33,9 @@ admin approve/reject decisions into `APIKeyApproval` CRs. Read more in
 
 ## Status
 
-Pre-1.0. Built originally as a PoC for a major bank's RHCL adoption;
-generalised here. Production usage expects you to configure your own
-identity provider, persist Postgres on a real volume, and pin image tags
-rather than `:latest`.
+Pre-1.0. Production usage expects you to configure your own identity
+provider, persist Postgres on a real volume, and pin image tags rather
+than `:latest`.
 
 ## Quickstart (lab cluster, 5 minutes)
 
@@ -108,6 +107,8 @@ All knobs are env-vars. Passing nothing yields a working demo with
 | `RHCL_DEFAULT_HOSTNAME` | (set by deploy.sh) | Used to compute API key example URLs. |
 | `PORTAL_SEED_HOSTNAME` | `banking-api-connectivity.apps.example.com` | Initial APIProduct seed hostname. |
 | `PORTAL_SEED_OPENAPI_URL` | `http://banking-api-v1.rhcl-apps.svc:8080/q/openapi` | OpenAPI spec proxied to the catalogue. |
+| `PORTAL_RHCL_NAMESPACE` | `rhcl-apps` | Namespace where RHCL `APIProduct` / `APIKey` CRs are written. |
+| `PORTAL_RHCL_APIKEYEMITSECRETREF` | `false` | Emit `spec.secretRef` on `APIKey` CRs. **Required for Kuadrant 1.4+**, rejected by 1.3 (the field is not declared in the v1alpha1 schema). Leave `false` on the pinned 1.3.x line; set `true` once the cluster moves to 1.4. |
 | `DB_URL` / `DB_USER` / `DB_PASSWORD` | (Postgres deploy) | Portal metadata store. |
 
 ### Frontend (runtime, injected by entrypoint)

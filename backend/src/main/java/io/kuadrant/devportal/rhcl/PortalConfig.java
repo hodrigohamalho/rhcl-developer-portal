@@ -27,6 +27,17 @@ public interface PortalConfig {
     @WithDefault("banking-api-apikey")
     String apiKeyAppLabel();
 
+    /**
+     * Whether to emit {@code spec.secretRef} on the {@code APIKey} CR.
+     * Required by RHCL 1.4 (CRD v1alpha1 enforces it). Rejected by RHCL 1.3
+     * (the field is not declared in the schema → API server returns 500
+     * on patch). Defaults to {@code false} so a stock install against the
+     * pinned 1.3.4 line works out of the box; flip to {@code true} when
+     * the cluster runs Kuadrant 1.4+.
+     */
+    @WithDefault("false")
+    boolean apiKeyEmitSecretRef();
+
     /** Fallback gateway hostname when an APIProduct has none in status. */
     Optional<String> defaultHostname();
 

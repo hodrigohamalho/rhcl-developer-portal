@@ -134,9 +134,12 @@ export default function AppShell({ children }: { children: ReactNode }) {
           <div className="ml-auto flex items-center gap-2">
             {auth.isAuthenticated ? (
               <>
-                <button className="relative rounded-xl p-2 text-slate-500 hover:bg-slate-100">
+                {/* Admin-only: a prominent "Pending approvals" CTA at the right
+                    of the header, with a live count badge. Most-used admin
+                    action; shouldn't require scrolling to find. */}
+                {isAdmin && <PendingApprovalsHeaderButton />}
+                <button className="relative rounded-xl p-2 text-slate-500 hover:bg-slate-100" title="Notifications">
                   <Bell size={18} />
-                  <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-rh-500" />
                 </button>
                 <div className="grid h-9 w-9 place-items-center rounded-full bg-brand-100 text-sm font-bold text-brand-700">
                   {initial}
@@ -196,6 +199,40 @@ function PendingApprovalsBadge() {
     <span className="rounded-full bg-rh-500 px-2 py-0.5 text-[10px] font-bold leading-none text-white">
       {count}
     </span>
+  );
+}
+
+/**
+ * The header-right entry point to the approvals queue — admin only. Always
+ * visible (even when the queue is empty so users learn where it lives),
+ * but renders a red count badge the moment there's a pending review.
+ *
+ * Kept separate from the bell so the bell stays for actual notifications.
+ */
+function PendingApprovalsHeaderButton() {
+  const { data } = useAdminSubscriptions("PENDING");
+  const count = data?.length ?? 0;
+  return (
+    <NavLink
+      to="/admin/subscriptions"
+      title="Subscription requests waiting for review"
+      className={({ isActive }) =>
+        cx(
+          "relative inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-medium transition-colors",
+          isActive
+            ? "bg-brand-50 text-brand-700"
+            : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+        )
+      }
+    >
+      <Inbox size={16} />
+      <span className="hidden sm:inline">Approvals</span>
+      {count > 0 && (
+        <span className="ml-0.5 rounded-full bg-rh-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">
+          {count}
+        </span>
+      )}
+    </NavLink>
   );
 }
 
