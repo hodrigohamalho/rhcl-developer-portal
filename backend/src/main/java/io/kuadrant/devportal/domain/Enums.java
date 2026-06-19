@@ -44,4 +44,15 @@ public final class Enums {
         ROTATED,
         REVOKED
     }
+
+    /**
+     * Wire protocol exposed by the product. Most APIs are plain {@code REST};
+     * {@code MCP} marks a Model Context Protocol server (Kuadrant's
+     * {@code MCPServerRegistration}) — same subscription / API-key flow,
+     * different "Try it" experience (tools instead of curl).
+     */
+    public enum ApiProtocol {
+        REST,
+        MCP
+    }
 }

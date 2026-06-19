@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
+import io.kuadrant.devportal.domain.Enums.ApiProtocol;
 import io.kuadrant.devportal.domain.Enums.ApiStatus;
 import io.kuadrant.devportal.domain.Enums.ApprovalMode;
 
@@ -59,6 +60,24 @@ public class ApiProduct extends PanacheEntity {
 
     /** {@code namespace/name} of the backing RHCL APIProduct CR, when synced. */
     public String rhclRef;
+
+    /**
+     * Wire protocol exposed by the product. Defaults to REST. MCP marks a
+     * product backed by a Kuadrant {@code MCPServerRegistration} — the
+     * subscription / API-key flow is identical, but the catalog UI swaps
+     * the "Try it" experience (tools list + connect snippets instead of
+     * curl examples).
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    public ApiProtocol protocol = ApiProtocol.REST;
+
+    /**
+     * For MCP products: the public URL consumers connect to (e.g.
+     * {@code https://gateway.example.com/mcp}). Read by the frontend to
+     * render Claude Desktop / Cline / mcp-inspector snippets.
+     */
+    public String mcpEndpoint;
 
     public String contactTeam;
     public String contactEmail;

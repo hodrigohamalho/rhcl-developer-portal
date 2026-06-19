@@ -22,11 +22,12 @@ public final class Dtos {
 
     public record ApiProductDto(Long id, String name, String displayName, String description, String version,
             String status, String owner, String baseUrl, String openApiSpecUrl, String approvalMode,
-            List<String> tags, String contactTeam, String contactEmail, Instant updatedAt) {
+            List<String> tags, String contactTeam, String contactEmail, Instant updatedAt,
+            String protocol, String mcpEndpoint) {
         public static ApiProductDto of(ApiProduct p) {
             return new ApiProductDto(p.id, p.name, p.displayName, p.description, p.version, p.status.name(),
                     p.owner, p.baseUrl, p.openApiSpecUrl, p.approvalMode.name(), p.tags, p.contactTeam,
-                    p.contactEmail, p.updatedAt);
+                    p.contactEmail, p.updatedAt, p.protocol.name(), p.mcpEndpoint);
         }
     }
 
