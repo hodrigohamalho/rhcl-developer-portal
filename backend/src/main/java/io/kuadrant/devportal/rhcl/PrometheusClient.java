@@ -45,6 +45,9 @@ public class PrometheusClient {
     @Inject
     PortalConfig config;
 
+    @Inject
+    SettingsService settings;
+
     private HttpClient http;
 
     private HttpClient client() {
@@ -61,7 +64,7 @@ public class PrometheusClient {
     }
 
     public boolean enabled() {
-        return config.prometheusUrl().filter(s -> !s.isBlank()).isPresent();
+        return settings.prometheusUrl().filter(s -> !s.isBlank()).isPresent();
     }
 
     /**
@@ -114,7 +117,7 @@ public class PrometheusClient {
 
     private JsonNode call(String path) {
         try {
-            String base = config.prometheusUrl().orElse("");
+            String base = settings.prometheusUrl().orElse("");
             HttpRequest req = HttpRequest.newBuilder(URI.create(base + path))
                     .header("Authorization", "Bearer " + token())
                     .timeout(Duration.ofSeconds(15)).GET().build();

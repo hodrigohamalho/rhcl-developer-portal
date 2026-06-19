@@ -67,6 +67,11 @@
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-kubernetes-client</artifactId>
     </dependency>
+    <!-- Required by MCPDiscoveryService.@Scheduled — periodic poll of MCP CRs. -->
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-scheduler</artifactId>
+    </dependency>
     <!-- REST client for OpenAPI spec fetching / Prometheus queries -->
     <dependency>
       <groupId>io.quarkus</groupId>

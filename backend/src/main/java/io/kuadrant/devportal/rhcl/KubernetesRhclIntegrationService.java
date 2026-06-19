@@ -50,6 +50,9 @@ public class KubernetesRhclIntegrationService implements RhclIntegrationService 
     PortalConfig config;
 
     @Inject
+    SettingsService settings;
+
+    @Inject
     PrometheusClient prometheus;
 
     private static final ResourceDefinitionContext API_KEY = new ResourceDefinitionContext.Builder()
@@ -64,7 +67,7 @@ public class KubernetesRhclIntegrationService implements RhclIntegrationService 
         ApiProduct product = ApiProduct.findById(subscription.apiProductId);
         ApplicationPlan plan = ApplicationPlan.findById(subscription.applicationPlanId);
         PortalUser user = PortalUser.findById(subscription.userId);
-        String ns = config.namespace();
+        String ns = settings.rhclNamespace();
         String apiName = product != null ? product.name : "api";
         String userId = user != null ? user.username : ("user-" + subscription.userId);
         String resourceName = sanitize(apiName + "-" + userId + "-" + subscription.id);
@@ -95,7 +98,7 @@ public class KubernetesRhclIntegrationService implements RhclIntegrationService 
         apiKeySpec.put("apiProductRef", Map.of("name", apiName));
         apiKeySpec.put("planTier", plan != null ? plan.tier : "bronze");
         apiKeySpec.put("requestedBy", Map.of("email", user != null ? user.email : "", "userId", userId));
-        if (config.apiKeyEmitSecretRef()) {
+        if (settings.apiKeyEmitSecretRef()) {
             apiKeySpec.put("secretRef", Map.of("name", secretName));
         }
         apiKeySpec.put("useCase", subscription.useCase != null ? subscription.useCase : "Provisioned by developer portal");
@@ -111,7 +114,7 @@ public class KubernetesRhclIntegrationService implements RhclIntegrationService 
 
     @Override
     public void revokeApiKey(Subscription subscription) {
-        String ns = config.namespace();
+        String ns = settings.rhclNamespace();
         String name = nameFromRef(subscription.rhclApiKeyRef);
         if (name == null) {
             return;
@@ -131,7 +134,7 @@ public class KubernetesRhclIntegrationService implements RhclIntegrationService 
     public void applyPlan(Subscription subscription, ApplicationPlan plan) {
         // Plan enforcement is owned by the PlanPolicy on the cluster; here we
         // only realign the plan-id annotation on the key Secret.
-        String ns = config.namespace();
+        String ns = settings.rhclNamespace();
         String name = nameFromRef(subscription.rhclApiKeyRef);
         if (name == null) {
             return;
@@ -205,7 +208,7 @@ public class KubernetesRhclIntegrationService implements RhclIntegrationService 
 
     @Override
     public String describe() {
-        return "kubernetes (RHCL CRDs in ns " + config.namespace() + ")";
+        return "kubernetes (RHCL CRDs in ns " + settings.rhclNamespace() + ")";
     }
 
     private GenericKubernetesResource devPortalResource(String kind, String plural, String name, String ns,
