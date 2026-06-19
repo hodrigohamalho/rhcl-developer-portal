@@ -4,6 +4,8 @@ A sample developer portal for APIs governed by [Red Hat Connectivity
 Link](https://www.redhat.com/en/technologies/cloud-computing/openshift/connectivity-link)
 (downstream of the upstream [Kuadrant](https://kuadrant.io) project).
 
+An external developer portal allows you to share your APIs with customers and partners.
+
 Lets API consumers **browse** APIs (with auth, plans and OpenAPI docs),
 **subscribe** to a plan, **get an API key**, and **see their usage** —
 without giving any of them direct access to the cluster. Lets API owners
