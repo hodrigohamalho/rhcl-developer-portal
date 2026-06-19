@@ -1,13 +1,19 @@
 import { useState } from "react";
-import { Plus } from "lucide-react";
-import { useApis, useCreateApi } from "../../api/hooks";
+import { Eye, EyeOff, Plus } from "lucide-react";
+import { useApis, useCreateApi, useUpdateApi } from "../../api/hooks";
 import { PageHeader } from "../../components/Layout";
 import { Badge, Button, Card, CardBody, Field, Input, Select, Spinner, Textarea } from "../../components/ui";
+import type { ApiProduct } from "../../api/types";
 
 export default function AdminApis() {
   const { data: apis, isLoading } = useApis();
   const create = useCreateApi();
+  const update = useUpdateApi();
   const [open, setOpen] = useState(false);
+  // `apis` returns all products (admin view), so we can show a Hidden/Visible
+  // toggle inline. Public catalogue (/products) filters to published=true.
+  const togglePublished = (a: ApiProduct) =>
+    update.mutate({ id: a.id, body: { published: !a.published } });
   const [form, setForm] = useState({
     name: "",
     displayName: "",
@@ -103,11 +109,15 @@ export default function AdminApis() {
                 <th className="px-5 py-3 font-medium">Status</th>
                 <th className="px-5 py-3 font-medium">Approval</th>
                 <th className="px-5 py-3 font-medium">Owner</th>
+                <th className="px-5 py-3 font-medium">Visibility</th>
               </tr>
             </thead>
             <tbody>
               {apis?.map((a) => (
-                <tr key={a.id} className="border-b border-slate-50 last:border-0">
+                <tr
+                  key={a.id}
+                  className={`border-b border-slate-50 last:border-0 ${a.published ? "" : "opacity-60"}`}
+                >
                   <td className="px-5 py-3 font-medium text-slate-800">{a.displayName}</td>
                   <td className="px-5 py-3 text-slate-600">{a.version}</td>
                   <td className="px-5 py-3">
@@ -115,6 +125,21 @@ export default function AdminApis() {
                   </td>
                   <td className="px-5 py-3 text-slate-600">{a.approvalMode}</td>
                   <td className="px-5 py-3 text-slate-600">{a.owner}</td>
+                  <td className="px-5 py-3">
+                    <button
+                      onClick={() => togglePublished(a)}
+                      disabled={update.isPending}
+                      title={a.published ? "Hide from public catalogue" : "Show in public catalogue"}
+                      className={`inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium transition-colors ${
+                        a.published
+                          ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                          : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                      }`}
+                    >
+                      {a.published ? <Eye size={14} /> : <EyeOff size={14} />}
+                      {a.published ? "Published" : "Hidden"}
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>

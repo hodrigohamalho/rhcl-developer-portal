@@ -34,11 +34,20 @@ export const useApplications = () =>
 export const useSubscriptions = () =>
   useQuery({ queryKey: ["subscriptions"], queryFn: () => api.get<Subscription[]>("/api/me/subscriptions") });
 
+/**
+ * Pass `undefined` for `subscriptionId` to get the aggregate view across
+ * every APPROVED subscription. The backend's `/api/me/usage` skips the
+ * filter and sums everything; the dashboard treats that as the default.
+ */
 export const useUsage = (subscriptionId?: number, days = 7) =>
   useQuery({
-    queryKey: ["usage", subscriptionId, days],
-    queryFn: () => api.get<Usage>(`/api/me/usage?subscriptionId=${subscriptionId}&days=${days}`),
-    enabled: !!subscriptionId,
+    queryKey: ["usage", subscriptionId ?? "all", days],
+    queryFn: () =>
+      api.get<Usage>(
+        subscriptionId != null
+          ? `/api/me/usage?subscriptionId=${subscriptionId}&days=${days}`
+          : `/api/me/usage?days=${days}`,
+      ),
   });
 
 export function useCreateApplication() {

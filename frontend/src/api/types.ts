@@ -20,6 +20,9 @@ export interface ApiProduct {
   protocol: ApiProtocol;
   /** Public MCP endpoint URL (only set when protocol === "MCP"). */
   mcpEndpoint: string | null;
+  /** When false, the API is hidden from the public catalogue (admins can
+   *  still see it under /admin/apis to toggle it back). Defaults to true. */
+  published: boolean;
 }
 
 export interface Plan {
@@ -95,6 +98,11 @@ export interface UsagePoint {
   blockedCount: number;
 }
 
+export interface TopProduct {
+  name: string;
+  requestCount: number;
+}
+
 export interface Usage {
   totalRequests: number;
   successCount: number;
@@ -106,4 +114,6 @@ export interface Usage {
   usagePercent: number;
   quotaResetAt: string;
   series: UsagePoint[];
+  /** Per-API breakdown — only populated in the aggregate view, empty for drill-down. */
+  topProducts: TopProduct[];
 }
