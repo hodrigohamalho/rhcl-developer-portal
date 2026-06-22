@@ -33,6 +33,19 @@ the cluster, mints API keys as RHCL `APIKey` CRs, and translates
 admin approve/reject decisions into `APIKeyApproval` CRs. Read more in
 [ARCHITECTURE.md](ARCHITECTURE.md).
 
+## Screenshots
+
+| | |
+|---|---|
+| ![Home](docs/images/01%20-%20Home.png) | ![Products](docs/images/02%20-%20Products.png) |
+| **Home** — public landing with tenant branding and featured APIs. | **Products** — catalogue browse with REST / MCP protocol filter. |
+| ![Products create](docs/images/02%20-%20Products%20create.png) | ![Products create 2](docs/images/02%20-%20Products%20create%202.png) |
+| **Publish (api-owner)** — register an APIProduct with tags, contact and OpenAPI link. | **Publish — protocol & approval** — choose REST/MCP, set manual or automatic approval. |
+| ![Plans](docs/images/03%20-%20Plans.png) | ![Subscription](docs/images/04%20-%20Subscription.png) |
+| **Plans** — per-product tiers with their rate-limit windows and quotas. | **Subscription** — consumer picks a plan, gets an API key (one-shot reveal). |
+| ![Analytics](docs/images/05%20-%20Analytics.png) | ![Docs](docs/images/06%20-%20Docs.png) |
+| **Analytics** — aggregate across products by default, drill into a single one for quota. | **Documentation** — embedded Swagger UI / OpenAPI viewer per product. |
+
 ## Status
 
 Pre-1.0. Production usage expects you to configure your own identity
