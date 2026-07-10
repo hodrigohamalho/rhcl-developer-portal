@@ -43,13 +43,22 @@ export function Button({
 export function Card({
   className,
   hover,
+  elevation = 1,
   children,
   ...rest
-}: { className?: string; hover?: boolean; children: ReactNode } & React.HTMLAttributes<HTMLDivElement>) {
+}: {
+  className?: string;
+  hover?: boolean;
+  // elevation=2 adds a stronger shadow + hairline ring (used by ported
+  // pages like Home/ApplicationDetail); default 1 keeps the base card look.
+  elevation?: 1 | 2;
+  children: ReactNode;
+} & React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
       className={cx(
-        "rounded-2xl border border-slate-200/80 bg-white shadow-card",
+        "rounded-2xl border border-slate-200/80 bg-white",
+        elevation === 2 ? "shadow-soft ring-1 ring-slate-200/40" : "shadow-card",
         hover && "transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-soft",
         className,
       )}
@@ -71,12 +80,17 @@ export function Stat({
   delta,
   hint,
   icon,
+  sparkline,
+  sparklineColor = "#6d5efc",
 }: {
   label: string;
   value: ReactNode;
   delta?: { value: string; up?: boolean };
   hint?: string;
   icon?: ReactNode;
+  // Optional trend sparkline (used by KPI cards on ApplicationDetail).
+  sparkline?: number[];
+  sparklineColor?: string;
 }) {
   return (
     <Card hover>
@@ -94,8 +108,26 @@ export function Stat({
           )}
           {hint && <span className="text-slate-400">{hint}</span>}
         </div>
+        {sparkline && sparkline.length > 1 && <MiniSparkline data={sparkline} color={sparklineColor} />}
       </CardBody>
     </Card>
+  );
+}
+
+// Tiny inline SVG sparkline — no chart dependency; renders a normalised
+// polyline scaled to the container. Used by the KPI Stat cards.
+function MiniSparkline({ data, color }: { data: number[]; color: string }) {
+  const w = 100;
+  const h = 28;
+  const min = Math.min(...data);
+  const span = Math.max(...data) - min || 1;
+  const points = data
+    .map((v, i) => `${(i / (data.length - 1)) * w},${h - ((v - min) / span) * h}`)
+    .join(" ");
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="mt-3 h-7 w-full" aria-hidden="true">
+      <polyline points={points} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }
 

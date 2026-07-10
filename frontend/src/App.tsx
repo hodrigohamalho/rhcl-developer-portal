@@ -8,6 +8,7 @@ import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
 import Subscribe from "./pages/Subscribe";
 import Applications from "./pages/Applications";
+import ApplicationDetail from "./pages/ApplicationDetail";
 import Analytics from "./pages/Analytics";
 import Documentation from "./pages/Documentation";
 import Settings from "./pages/Settings";
@@ -52,6 +53,7 @@ export default function App() {
           }
         />
         <Route path="/applications" element={<RequireAuth><Applications /></RequireAuth>} />
+        <Route path="/applications/:id" element={<RequireAuth><ApplicationDetail /></RequireAuth>} />
         <Route path="/analytics" element={<RequireAuth><Analytics /></RequireAuth>} />
         <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
         {/* Administration — reachable from Settings, not in the primary nav. */}

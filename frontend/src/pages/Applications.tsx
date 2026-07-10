@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Boxes, KeyRound, Plus, RefreshCw } from "lucide-react";
 import { useProfile, useRotateKey } from "../api/hooks";
 import { PageHeader } from "../components/AppShell";
@@ -58,7 +58,11 @@ export default function Applications() {
           {profile!.applications.map((a) => {
             const subs = subsByApp.get(a.id) ?? [];
             return (
-              <Card key={a.id} hover className="animate-fade-up">
+              <Link key={a.id} to={`/applications/${a.id}`} className="block">
+                {/* Entire card is the affordance — clicking anywhere opens the
+                    application workspace (ApplicationDetail). The inner Rotate
+                    button guards the click so it doesn't also navigate. */}
+                <Card hover className="animate-fade-up">
                 <CardBody>
                   <div className="flex items-start gap-3">
                     <div className="grid h-11 w-11 place-items-center rounded-xl bg-brand-50 text-brand-600">
@@ -87,7 +91,8 @@ export default function Applications() {
                     </div>
                   )}
                 </CardBody>
-              </Card>
+                </Card>
+              </Link>
             );
           })}
         </div>
@@ -119,7 +124,13 @@ function CredRow({ sub, onRotated }: { sub: Subscription; onRotated: (c: ApiCred
         <button
           title="Rotate key"
           className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-          onClick={async () => onRotated(await rotate.mutateAsync(sub.id))}
+          onClick={async (e) => {
+            // The card wraps a <Link>; guard so Rotate doesn't also navigate
+            // into the application workspace.
+            e.preventDefault();
+            e.stopPropagation();
+            onRotated(await rotate.mutateAsync(sub.id));
+          }}
         >
           <RefreshCw size={13} className={rotate.isPending ? "animate-spin" : ""} />
         </button>

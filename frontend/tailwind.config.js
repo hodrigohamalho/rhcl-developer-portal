@@ -32,6 +32,15 @@ export default {
         sans: ["Inter", "system-ui", "ui-sans-serif", "sans-serif"],
         mono: ["ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
       },
+      fontSize: {
+        // Type hierarchy used by the ported Home / ApplicationDetail pages.
+        "page-title": ["2rem", { lineHeight: "2.375rem", letterSpacing: "-0.02em", fontWeight: "800" }],
+        "section-title": ["1.25rem", { lineHeight: "1.625rem", letterSpacing: "-0.01em", fontWeight: "700" }],
+        "card-title": ["1rem", { lineHeight: "1.375rem", fontWeight: "700" }],
+        metric: ["2.25rem", { lineHeight: "2.625rem", letterSpacing: "-0.02em", fontWeight: "800" }],
+        "metric-sm": ["1.875rem", { lineHeight: "2.25rem", letterSpacing: "-0.02em", fontWeight: "800" }],
+        caption: ["0.75rem", { lineHeight: "1rem", fontWeight: "600", letterSpacing: "0.02em" }],
+      },
       borderRadius: {
         xl: "0.875rem",
         "2xl": "1.125rem",
@@ -41,6 +50,8 @@ export default {
         card: "0 1px 2px rgba(16,24,40,.04), 0 1px 3px rgba(16,24,40,.06)",
         soft: "0 2px 8px rgba(16,24,40,.06), 0 8px 24px rgba(16,24,40,.06)",
         lift: "0 12px 32px rgba(43,33,120,.14)",
+        "surface-1": "0 1px 2px rgba(16,24,40,.04), 0 1px 3px rgba(16,24,40,.05)",
+        "surface-2": "0 1px 2px rgba(16,24,40,.05), 0 4px 12px rgba(16,24,40,.08), 0 16px 32px -8px rgba(16,24,40,.06)",
       },
       keyframes: {
         "fade-up": {
