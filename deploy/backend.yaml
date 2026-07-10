@@ -15,6 +15,10 @@ data:
   RHCL_NAMESPACE: "rhcl-apps"
   RHCL_APIKEY_HEADER: "api-key"
   RHCL_APIKEY_APP_LABEL: "banking-api-apikey"
+  # RHCL/Kuadrant 1.4+ requires spec.secretRef on the APIKey CR; emit it on
+  # approve (the 1.3 schema rejected it, hence the toggle). This lab runs 1.4.1,
+  # so without this the approve flow 500s: "APIKey ... spec.secretRef: Required".
+  PORTAL_RHCL_API_KEY_EMIT_SECRET_REF: "true"
   # In-cluster Thanos querier for real per-API usage metrics (usage dashboard).
   PORTAL_RHCL_PROMETHEUS_URL: "https://thanos-querier.openshift-monitoring.svc:9091"
   SEED_ENABLED: "true"
