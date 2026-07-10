@@ -80,13 +80,23 @@ function OidcBridge({ children }: { children: ReactNode }) {
     return Array.from(collected);
   }, [profile, accessToken]);
 
+  // SECURITY: identity + roles must reflect the CURRENT session only.
+  // react-oidc-context keeps the last user (and its expired token) in
+  // localStorage, so username/roles survive a logout / token expiry.
+  // Surfacing them while `isAuthenticated` is false let a stale admin token
+  // light up the Administration nav and greet the previous user on a
+  // signed-out browser. Gate all three so an unauthenticated session is
+  // genuinely anonymous — the backend enforces roles server-side.
+  const authed = auth.isAuthenticated;
   const value: PortalAuth = {
     enabled: true,
     isLoading: auth.isLoading,
-    isAuthenticated: auth.isAuthenticated,
-    username: (profile?.preferred_username as string) ?? auth.user?.profile.sub,
-    email: profile?.email as string | undefined,
-    roles,
+    isAuthenticated: authed,
+    username: authed
+      ? ((profile?.preferred_username as string) ?? auth.user?.profile.sub)
+      : undefined,
+    email: authed ? (profile?.email as string | undefined) : undefined,
+    roles: authed ? roles : [],
     login: () => void auth.signinRedirect(),
     logout: () => void auth.signoutRedirect(),
   };
